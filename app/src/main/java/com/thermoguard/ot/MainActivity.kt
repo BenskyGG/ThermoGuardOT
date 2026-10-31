@@ -1,6 +1,8 @@
 package com.thermoguard.ot
 
 import android.Manifest
+import com.google.firebase.Firebase
+import com.google.firebase.firestore.firestore
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
@@ -248,6 +250,13 @@ class MainActivity : ComponentActivity() {
                                 if (temperaturaNumerica < 0 || temperaturaNumerica > 4) {
                                     estadoAlarma.value = true
                                     if (sonidoAlarma?.isPlaying == false) sonidoAlarma?.play()
+                                    val db = Firebase.firestore
+                                    val doc = db.collection("alertas").document()
+                                    doc.set(mapOf(
+                                        "temperatura" to tempLimpiada,
+                                        "estado" to "ALERTA_TEMPERATURA",
+                                        "hora" to System.currentTimeMillis().toString()
+                                    ))
                                 } else {
                                     // Si entra un número entre 0 y 4 normal, se apaga sola
                                     estadoAlarma.value = false

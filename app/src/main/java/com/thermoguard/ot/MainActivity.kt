@@ -1,8 +1,6 @@
 package com.thermoguard.ot
 
 import android.Manifest
-import com.google.firebase.Firebase
-import com.google.firebase.firestore.firestore
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
@@ -61,13 +59,61 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         bluetoothAdapter = bluetoothManager.adapter
 
-        val uri: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+        val uri: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         sonidoAlarma = RingtoneManager.getRingtone(applicationContext, uri)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            sonidoAlarma?.isLooping = true
+        }
 
-        setContent { PantallaPrincipal() }
+        setContent {
+            PantallaPrincipal()
+        }
+
+        // Registro de prueba en Firebase Firestore
+        val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+
+        val datosAlerta = hashMapOf(
+            "temperatura" to 38.5,
+            "estado" to "ALERTA_CRITICA",
+            "hora" to System.currentTimeMillis().toString()
+        )
+
+        db.collection("alertas").add(datosAlerta)
+            .addOnSuccessListener {
+                android.util.Log.d("DEBUG_FIREBASE", "¡Alerta guardada con éxito!")
+            }
+            .addOnFailureListener { e ->
+                android.util.Log.e("DEBUG_FIREBASE", "Error: ${e.message}")
+            }
+    }
+
+    // Función para evaluar el estado y guardarlo en Firebase
+    fun evaluarYGuardarTemperatura(temperatura: Int) {
+        val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+
+        val estadoActual = when {
+            temperatura > 10 -> "ALERTA_CALOR_ALTO"
+            temperatura < -5 -> "ALERTA_FRIO_EXTREMO"
+            else -> "NORMAL"
+        }
+
+        val datosAlerta = hashMapOf(
+            "temperatura" to temperatura,
+            "estado" to estadoActual,
+            "hora" to System.currentTimeMillis().toString()
+        )
+
+        db.collection("alertas").add(datosAlerta)
+            .addOnSuccessListener {
+                android.util.Log.d("DEBUG_FIREBASE", "Temperatura $temperatura registrada como: $estadoActual")
+            }
+            .addOnFailureListener { e ->
+                android.util.Log.e("DEBUG_FIREBASE", "Error al guardar: ${e.message}")
+            }
     }
 
     @Composable
@@ -126,22 +172,53 @@ class MainActivity : ComponentActivity() {
 
             Text(text = "Temperatura Actual: ${temperaturaSimulada.value}°C", fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Row(modifier = Modifier.padding(10.dp)) {
-                // Ahora permite bajar hasta -10°C para probar los -5°C
                 Button(
-                    onClick = { if (temperaturaSimulada.value > -10) temperaturaSimulada.value-- },
+                    onClick = {
+                        if (temperaturaSimulada.value > -10) {
+                            temperaturaSimulada.value--
+                            evaluarYGuardarTemperatura(temperaturaSimulada.value)
+                        }
+                    },
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Blue)
                 ) { Text("- Bajar") }
 
                 Spacer(modifier = Modifier.width(20.dp))
 
-                // Ahora permite subir hasta 15°C para probar los 10°C
                 Button(
-                    onClick = { if (temperaturaSimulada.value < 15) temperaturaSimulada.value++ },
+                    onClick = {
+                        if (temperaturaSimulada.value < 15) {
+                            temperaturaSimulada.value++
+                            evaluarYGuardarTemperatura(temperaturaSimulada.value)
+                        }
+                    },
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
                 ) { Text("+ Subir") }
             }
             Button(onClick = { enviarTemperaturaPorBluetooth(temperaturaSimulada.value) }, colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)) { Text("ENVIAR SEÑAL DE TEMP") }
             Spacer(modifier = Modifier.height(20.dp))
+
+            Button(
+                onClick = {
+                    val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+
+                    val datosAlerta = hashMapOf(
+                        "temperatura" to temperaturaSimulada.value,
+                        "estado" to "ALERTA_CRITICA",
+                        "hora" to System.currentTimeMillis().toString()
+                    )
+
+                    db.collection("alertas").add(datosAlerta)
+                        .addOnSuccessListener {
+                            android.util.Log.d("DEBUG_FIREBASE", "¡Alerta con ${temperaturaSimulada.value}°C guardada con éxito!")
+                        }
+                        .addOnFailureListener { e ->
+                            android.util.Log.e("DEBUG_FIREBASE", "Error: ${e.message}")
+                        }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+            ) {
+                Text("Guardar Alerta en la Nube")
+            }
 
             LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
                 items(listaDispositivos) { dispositivo ->
@@ -183,7 +260,6 @@ class MainActivity : ComponentActivity() {
                 color = if (estadoAlarma.value) Color.Red else Color.Blue
             )
 
-            // PANEL DE EMERGENCIA CUANDO HAY ALARMA
             if (estadoAlarma.value) {
                 Spacer(modifier = Modifier.height(20.dp))
                 Text(
@@ -197,7 +273,6 @@ class MainActivity : ComponentActivity() {
 
                 Button(
                     onClick = {
-                        // El botón restablece el sistema a la temperatura segura de 2°C
                         estadoAlarma.value = false
                         temperaturaRecibida.value = "2"
                         sonidoAlarma?.stop()
@@ -228,8 +303,10 @@ class MainActivity : ComponentActivity() {
         Toast.makeText(this, "Esperando conexión... (Abriendo puerta)", Toast.LENGTH_LONG).show()
         Thread {
             try {
-                val serverSocket = bluetoothAdapter?.listenUsingRfcommWithServiceRecord("ThermoGuard", UUID_PROYECTO)
+                // CAMBIO 1: Usamos InsecureRfcomm
+                val serverSocket = bluetoothAdapter?.listenUsingInsecureRfcommWithServiceRecord("ThermoGuard", UUID_PROYECTO)
                 val socket = serverSocket?.accept()
+
                 if (socket != null) {
                     runOnUiThread { Toast.makeText(this, "¡Sensor Conectado con Éxito!", Toast.LENGTH_LONG).show() }
                     val inputStream = socket.inputStream
@@ -246,19 +323,20 @@ class MainActivity : ComponentActivity() {
                             runOnUiThread {
                                 temperaturaRecibida.value = tempLimpiada
 
-                                // LA LÓGICA ESTRELLA: Si baja de 0°C o sube de 4°C, dispara la alarma
                                 if (temperaturaNumerica < 0 || temperaturaNumerica > 4) {
+                                    android.util.Log.d("DEBUG_FIREBASE", "¡Entró a la alerta! Temperatura: $temperaturaNumerica")
                                     estadoAlarma.value = true
+
                                     if (sonidoAlarma?.isPlaying == false) sonidoAlarma?.play()
-                                    val db = Firebase.firestore
+
+                                    val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
                                     val doc = db.collection("alertas").document()
                                     doc.set(mapOf(
-                                        "temperatura" to tempLimpiada,
+                                        "temperatura" to temperaturaNumerica,
                                         "estado" to "ALERTA_TEMPERATURA",
                                         "hora" to System.currentTimeMillis().toString()
                                     ))
                                 } else {
-                                    // Si entra un número entre 0 y 4 normal, se apaga sola
                                     estadoAlarma.value = false
                                     if (sonidoAlarma?.isPlaying == true) sonidoAlarma?.stop()
                                 }
@@ -266,7 +344,10 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+                // CAMBIO 2: Mensaje de error para el supervisor
+                runOnUiThread { Toast.makeText(this, "Error del Supervisor: ${e.message}", Toast.LENGTH_LONG).show() }
+            }
         }.start()
     }
 
@@ -316,13 +397,17 @@ class MainActivity : ComponentActivity() {
     private fun conectarComoEmisor(dispositivoDestino: BluetoothDevice) {
         Toast.makeText(this, "Intentando conectar con ${dispositivoDestino.name}...", Toast.LENGTH_SHORT).show()
         Thread {
-            bluetoothAdapter?.cancelDiscovery()
             try {
-                socketConexion = dispositivoDestino.createRfcommSocketToServiceRecord(UUID_PROYECTO)
+                bluetoothAdapter?.cancelDiscovery()
+
+                // CAMBIO 3: Usamos InsecureRfcomm
+                socketConexion = dispositivoDestino.createInsecureRfcommSocketToServiceRecord(UUID_PROYECTO)
                 socketConexion?.connect()
+
                 runOnUiThread { Toast.makeText(this@MainActivity, "¡CONECTADO! Ya puedes enviar señales.", Toast.LENGTH_LONG).show() }
             } catch (e: Exception) {
-                runOnUiThread { Toast.makeText(this@MainActivity, "Rechazado: El otro celular debe presionar 'Abrir Compuerta' primero.", Toast.LENGTH_LONG).show() }
+                // CAMBIO 4: Leemos la razón exacta
+                runOnUiThread { Toast.makeText(this@MainActivity, "Fallo al conectar: ${e.message}", Toast.LENGTH_LONG).show() }
                 try { socketConexion?.close() } catch (closeException: Exception) { }
             }
         }.start()

@@ -63,8 +63,8 @@ import com.google.firebase.firestore.FirebaseFirestore
 import java.util.UUID
 
 /* ===========================================================
- *  SISTEMA DE DISEÑO THERMOGUARD OT  (solo visual)
- * =========================================================== */
+-  SISTEMA DE DISEÑO THERMOGUARD OT  (solo visual)
+- =========================================================== */
 
 private object TG {
     // Fondos y superficies
@@ -242,8 +242,8 @@ private fun TarjetaRol(titulo: String, descripcion: String, colorAcento: Color, 
 }
 
 /* ===========================================================
- *  ACTIVITY
- * =========================================================== */
+-  ACTIVITY
+- =========================================================== */
 
 class MainActivity : ComponentActivity() {
 
@@ -274,11 +274,16 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            PantallaPrincipal()
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = TG.Fondo
+            ) {
+                PantallaPrincipal()
+            }
         }
 
-        // Registro de prueba en Firebase Firestore
-        val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+        // Registro inicial en Firebase Firestore
+        val db = FirebaseFirestore.getInstance()
 
         val datosAlerta = hashMapOf(
             "temperatura" to 38.5,
@@ -297,7 +302,7 @@ class MainActivity : ComponentActivity() {
 
     // Función para evaluar el estado y guardarlo en Firebase
     fun evaluarYGuardarTemperatura(temperatura: Int) {
-        val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+        val db = FirebaseFirestore.getInstance()
 
         val estadoActual = when {
             temperatura > 10 -> "ALERTA_CALOR_ALTO"
@@ -318,14 +323,6 @@ class MainActivity : ComponentActivity() {
             .addOnFailureListener { e ->
                 android.util.Log.e("DEBUG_FIREBASE", "Error al guardar: ${e.message}")
             }
-        setContent {
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = TG.Fondo
-            ) {
-                PantallaPrincipal()
-            }
-        }
     }
 
     @Composable
@@ -349,8 +346,9 @@ class MainActivity : ComponentActivity() {
     }
 
     /* ---------------------------------------------------------
-     *  PANTALLA 1: selección de rol
-     * --------------------------------------------------------- */
+-  PANTALLA 1: selección de rol
+- --------------------------------------------------------- */
+
     @Composable
     fun MenuSeleccionRol(onSensorClick: () -> Unit, onSupervisorClick: () -> Unit) {
         Column(
@@ -368,7 +366,7 @@ class MainActivity : ComponentActivity() {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Logo dentro de un marco, para que su fondo gris no desentone
+            // Logo dentro de un marco
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -434,8 +432,9 @@ class MainActivity : ComponentActivity() {
     }
 
     /* ---------------------------------------------------------
-     *  PANTALLA 2: rol sensor (emisor)
-     * --------------------------------------------------------- */
+-  PANTALLA 2: rol sensor (emisor)
+- --------------------------------------------------------- */
+
     @SuppressLint("MissingPermission")
     @Composable
     fun PantallaEmisorSensor(onVolverClick: () -> Unit) {
@@ -480,17 +479,6 @@ class MainActivity : ComponentActivity() {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            Text(text = "Temperatura Actual: ${temperaturaSimulada.value}°C", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Row(modifier = Modifier.padding(10.dp)) {
-                Button(
-                    onClick = {
-                        if (temperaturaSimulada.value > -10) {
-                            temperaturaSimulada.value--
-                            evaluarYGuardarTemperatura(temperaturaSimulada.value)
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Blue)
-                ) { Text("- Bajar") }
             PanelTarjeta(
                 modifier = Modifier.fillMaxWidth(),
                 colorBorde = colorLectura.copy(alpha = 0.6f)
@@ -520,65 +508,41 @@ class MainActivity : ComponentActivity() {
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Button(
-                            onClick = { if (temperaturaSimulada.value > -10) temperaturaSimulada.value-- },
+                            onClick = {
+                                if (temperaturaSimulada.value > -10) {
+                                    temperaturaSimulada.value--
+                                    evaluarYGuardarTemperatura(temperaturaSimulada.value)
+                                }
+                            },
                             modifier = Modifier.weight(1f).height(52.dp),
                             shape = RoundedCornerShape(10.dp),
                             border = BorderStroke(1.dp, TG.Azul.copy(alpha = 0.5f)),
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F1A2A)),
                             elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp, pressedElevation = 0.dp)
                         ) {
-                            Text("−", fontWeight = FontWeight.Bold, fontSize = 26.sp, color = TG.Cian)
+                            Text("− Bajar", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = TG.Cian)
                         }
 
-                Spacer(modifier = Modifier.width(20.dp))
-
-                Button(
-                    onClick = {
-                        if (temperaturaSimulada.value < 15) {
-                            temperaturaSimulada.value++
-                            evaluarYGuardarTemperatura(temperaturaSimulada.value)
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
-                ) { Text("+ Subir") }
                         Button(
-                            onClick = { if (temperaturaSimulada.value < 15) temperaturaSimulada.value++ },
+                            onClick = {
+                                if (temperaturaSimulada.value < 15) {
+                                    temperaturaSimulada.value++
+                                    evaluarYGuardarTemperatura(temperaturaSimulada.value)
+                                }
+                            },
                             modifier = Modifier.weight(1f).height(52.dp),
                             shape = RoundedCornerShape(10.dp),
                             border = BorderStroke(1.dp, TG.Rojo.copy(alpha = 0.5f)),
                             colors = ButtonDefaults.buttonColors(containerColor = TG.RojoOscuro),
                             elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp, pressedElevation = 0.dp)
                         ) {
-                            Text("+", fontWeight = FontWeight.Bold, fontSize = 26.sp, color = TG.Rojo)
+                            Text("+ Subir", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = TG.Rojo)
                         }
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
-
-            Button(
-                onClick = {
-                    val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-
-                    val datosAlerta = hashMapOf(
-                        "temperatura" to temperaturaSimulada.value,
-                        "estado" to "ALERTA_CRITICA",
-                        "hora" to System.currentTimeMillis().toString()
-                    )
-
-                    db.collection("alertas").add(datosAlerta)
-                        .addOnSuccessListener {
-                            android.util.Log.d("DEBUG_FIREBASE", "¡Alerta con ${temperaturaSimulada.value}°C guardada con éxito!")
-                        }
-                        .addOnFailureListener { e ->
-                            android.util.Log.e("DEBUG_FIREBASE", "Error: ${e.message}")
-                        }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
-            ) {
-                Text("Guardar Alerta en la Nube")
-            }
 
             BotonIndustrial(
                 texto = "Enviar señal",
@@ -647,8 +611,9 @@ class MainActivity : ComponentActivity() {
     }
 
     /* ---------------------------------------------------------
-     *  PANTALLA 3: rol supervisor (receptor)
-     * --------------------------------------------------------- */
+-  PANTALLA 3: rol supervisor (receptor)
+- --------------------------------------------------------- */
+
     @Composable
     fun PantallaReceptorSupervisor(onVolverClick: () -> Unit) {
         val enAlarma = estadoAlarma.value
@@ -777,15 +742,6 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                Button(
-                    onClick = {
-                        estadoAlarma.value = false
-                        temperaturaRecibida.value = "2"
-                        sonidoAlarma?.stop()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
-                ) {
-                    Text("NORMALIZAR A RANGO SEGURO (0°C - 4°C)", color = Color.White, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(16.dp))
 
                     BotonIndustrial(
@@ -814,8 +770,8 @@ class MainActivity : ComponentActivity() {
     }
 
     /* ===========================================================
-     *  LÓGICA (sin cambios respecto al original)
-     * =========================================================== */
+-  LÓGICA
+- =========================================================== */
 
     private fun cerrarConexiones() {
         try { socketConexion?.close() } catch (_: Exception) {}
@@ -856,7 +812,6 @@ class MainActivity : ComponentActivity() {
 
                                     if (sonidoAlarma?.isPlaying == false) sonidoAlarma?.play()
 
-                                    val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
                                     val db = FirebaseFirestore.getInstance()
                                     val doc = db.collection("alertas").document()
                                     doc.set(mapOf(
@@ -872,7 +827,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
                 // CAMBIO 2: Mensaje de error para el supervisor
                 runOnUiThread { Toast.makeText(this, "Error del Supervisor: ${e.message}", Toast.LENGTH_LONG).show() }
             }
@@ -937,10 +892,6 @@ class MainActivity : ComponentActivity() {
                 // CAMBIO 4: Leemos la razón exacta
                 runOnUiThread { Toast.makeText(this@MainActivity, "Fallo al conectar: ${e.message}", Toast.LENGTH_LONG).show() }
                 try { socketConexion?.close() } catch (closeException: Exception) { }
-                runOnUiThread { Toast.makeText(this@MainActivity, "¡CONECTADO!", Toast.LENGTH_LONG).show() }
-            } catch (_: Exception) {
-                runOnUiThread { Toast.makeText(this@MainActivity, "Rechazado: El otro celular debe esperar señal.", Toast.LENGTH_LONG).show() }
-                try { socketConexion?.close() } catch (_: Exception) { }
             }
         }.start()
     }

@@ -62,32 +62,22 @@ import androidx.core.content.ContextCompat
 import com.google.firebase.firestore.FirebaseFirestore
 import java.util.UUID
 
-/* ===========================================================
--  SISTEMA DE DISEÑO THERMOGUARD OT  (solo visual)
-- =========================================================== */
-
 private object TG {
-    // Fondos y superficies
     val Fondo = Color(0xFF0D1014)
     val Superficie = Color(0xFF151A1F)
     val SuperficieAlta = Color(0xFF1D242B)
     val Borde = Color(0xFF2A333C)
-
-    // Texto
     val TextoPrimario = Color(0xFFE8ECEF)
-    val TextoSecundario = Color(0xFF8E979E)   // gris del hexágono del logo
+    val TextoSecundario = Color(0xFF8E979E)
     val TextoTenue = Color(0xFF5C666E)
-
-    // Acentos
-    val Azul = Color(0xFF1E88E5)              // copo de nieve del logo
+    val Azul = Color(0xFF1E88E5)
     val Cian = Color(0xFF22C7E8)
-    val Rojo = Color(0xFFE62117)              // "OT" del logo
+    val Rojo = Color(0xFFE62117)
     val RojoOscuro = Color(0xFF3A1412)
     val Verde = Color(0xFF2ECC71)
 }
 
 private val FuenteDatos = FontFamily.Monospace
-
 private enum class TipoBoton { PRIMARIO, SECUNDARIO, PELIGRO, FANTASMA }
 
 @Composable
@@ -120,13 +110,7 @@ private fun BotonIndustrial(
             pressedElevation = 0.dp
         )
     ) {
-        Text(
-            text = texto,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            letterSpacing = 0.8.sp,
-            textAlign = TextAlign.Center
-        )
+        Text(text = texto, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp, textAlign = TextAlign.Center)
     }
 }
 
@@ -149,25 +133,11 @@ private fun PanelTarjeta(
 
 @Composable
 private fun EncabezadoPantalla(titulo: String, subtitulo: String, estado: String, colorEstado: Color) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .width(4.dp)
-                .height(40.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(TG.Rojo)
-        )
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Box(modifier = Modifier.width(4.dp).height(40.dp).clip(RoundedCornerShape(2.dp)).background(TG.Rojo))
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = titulo,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = TG.TextoPrimario
-            )
+            Text(text = titulo, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TG.TextoPrimario)
             Text(text = subtitulo, fontSize = 12.sp, color = TG.TextoSecundario)
         }
         ChipEstado(texto = estado, color = colorEstado)
@@ -184,20 +154,9 @@ private fun ChipEstado(texto: String, color: Color) {
             .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(color)
-        )
+        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(color))
         Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = texto,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold,
-            letterSpacing = 1.sp,
-            color = color
-        )
+        Text(text = texto, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp, color = color)
     }
 }
 
@@ -212,38 +171,15 @@ private fun TarjetaRol(titulo: String, descripcion: String, colorAcento: Color, 
             .clickable { onClick() },
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .width(6.dp)
-                .height(84.dp)
-                .background(colorAcento)
-        )
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 18.dp, vertical = 16.dp)
-        ) {
-            Text(
-                text = titulo,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Bold,
-                color = TG.TextoPrimario
-            )
+        Box(modifier = Modifier.width(6.dp).height(84.dp).background(colorAcento))
+        Column(modifier = Modifier.weight(1f).padding(horizontal = 18.dp, vertical = 16.dp)) {
+            Text(text = titulo, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = TG.TextoPrimario)
             Spacer(modifier = Modifier.height(4.dp))
             Text(text = descripcion, fontSize = 12.sp, color = TG.TextoSecundario)
         }
-        Text(
-            text = "›",
-            fontSize = 28.sp,
-            color = colorAcento,
-            modifier = Modifier.padding(end = 20.dp)
-        )
+        Text(text = "›", fontSize = 28.sp, color = colorAcento, modifier = Modifier.padding(end = 20.dp))
     }
 }
-
-/* ===========================================================
--  ACTIVITY
-- =========================================================== */
 
 class MainActivity : ComponentActivity() {
 
@@ -256,8 +192,15 @@ class MainActivity : ComponentActivity() {
     private var estadoAlarma = mutableStateOf(false)
     private var sonidoAlarma: Ringtone? = null
 
-    private val solicitarPermiso = registerForActivityResult(ActivityResultContracts.RequestPermission()) { permiso ->
-        if (permiso) encenderAntena()
+    private val solicitarPermiso = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permisos ->
+        val concedidoConnect = permisos[Manifest.permission.BLUETOOTH_CONNECT] ?: false
+        val concedidoScan = permisos[Manifest.permission.BLUETOOTH_SCAN] ?: false
+
+        if (concedidoConnect || concedidoScan || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            encenderAntena()
+        } else {
+            Toast.makeText(this, "Debes aceptar los permisos de Bluetooth para continuar.", Toast.LENGTH_LONG).show()
+        }
     }
     private val solicitarBluetooth = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { }
 
@@ -274,36 +217,14 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = TG.Fondo
-            ) {
+            Surface(modifier = Modifier.fillMaxSize(), color = TG.Fondo) {
                 PantallaPrincipal()
             }
         }
-
-        // Registro inicial en Firebase Firestore
-        val db = FirebaseFirestore.getInstance()
-
-        val datosAlerta = hashMapOf(
-            "temperatura" to 38.5,
-            "estado" to "ALERTA_CRITICA",
-            "hora" to System.currentTimeMillis().toString()
-        )
-
-        db.collection("alertas").add(datosAlerta)
-            .addOnSuccessListener {
-                android.util.Log.d("DEBUG_FIREBASE", "¡Alerta guardada con éxito!")
-            }
-            .addOnFailureListener { e ->
-                android.util.Log.e("DEBUG_FIREBASE", "Error: ${e.message}")
-            }
     }
 
-    // Función para evaluar el estado y guardarlo en Firebase
     fun evaluarYGuardarTemperatura(temperatura: Int) {
         val db = FirebaseFirestore.getInstance()
-
         val estadoActual = when {
             temperatura > 10 -> "ALERTA_CALOR_ALTO"
             temperatura < -5 -> "ALERTA_FRIO_EXTREMO"
@@ -318,7 +239,7 @@ class MainActivity : ComponentActivity() {
 
         db.collection("alertas").add(datosAlerta)
             .addOnSuccessListener {
-                android.util.Log.d("DEBUG_FIREBASE", "Temperatura $temperatura registrada como: $estadoActual")
+                android.util.Log.d("DEBUG_FIREBASE", "Temperatura $temperatura registrada: $estadoActual")
             }
             .addOnFailureListener { e ->
                 android.util.Log.e("DEBUG_FIREBASE", "Error al guardar: ${e.message}")
@@ -345,20 +266,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /* ---------------------------------------------------------
--  PANTALLA 1: selección de rol
-- --------------------------------------------------------- */
-
     @Composable
     fun MenuSeleccionRol(onSensorClick: () -> Unit, onSupervisorClick: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(Color(0xFF151B21), TG.Fondo)
-                    )
-                )
+                .background(Brush.verticalGradient(colors = listOf(Color(0xFF151B21), TG.Fondo)))
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
@@ -366,7 +279,6 @@ class MainActivity : ComponentActivity() {
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Logo dentro de un marco
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -377,63 +289,23 @@ class MainActivity : ComponentActivity() {
                     painter = painterResource(id = R.drawable.logo_thermoguard),
                     contentDescription = "Logo ThermoGuard OT",
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(170.dp)
+                    modifier = Modifier.fillMaxWidth().height(170.dp)
                 )
             }
 
             Spacer(modifier = Modifier.height(20.dp))
-
-            Text(
-                text = "Monitoreo de cadena de frío",
-                fontSize = 13.sp,
-                color = TG.TextoSecundario,
-                letterSpacing = 1.sp,
-                textAlign = TextAlign.Center
-            )
-
+            Text(text = "Monitoreo de cadena de frío", fontSize = 13.sp, color = TG.TextoSecundario, letterSpacing = 1.sp, textAlign = TextAlign.Center)
             Spacer(modifier = Modifier.height(32.dp))
-
-            Text(
-                text = "Elige tu rol en esta unidad",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TG.TextoPrimario,
-                modifier = Modifier.fillMaxWidth()
-            )
+            Text(text = "Elige tu rol en esta unidad", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TG.TextoPrimario, modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(12.dp))
 
-            TarjetaRol(
-                titulo = "Sensor",
-                descripcion = "Carnicería · envía la temperatura por Bluetooth",
-                colorAcento = TG.Cian,
-                onClick = onSensorClick
-            )
-
+            TarjetaRol(titulo = "Sensor", descripcion = "Carnicería · envía la temperatura por Bluetooth", colorAcento = TG.Cian, onClick = onSensorClick)
             Spacer(modifier = Modifier.height(14.dp))
-
-            TarjetaRol(
-                titulo = "Supervisor",
-                descripcion = "Recepción · recibe lecturas y alarmas",
-                colorAcento = TG.Rojo,
-                onClick = onSupervisorClick
-            )
-
+            TarjetaRol(titulo = "Supervisor", descripcion = "Recepción · recibe lecturas y alarmas", colorAcento = TG.Rojo, onClick = onSupervisorClick)
             Spacer(modifier = Modifier.height(32.dp))
-
-            Text(
-                text = "Rango seguro: 0 °C a 4 °C",
-                fontSize = 12.sp,
-                fontFamily = FuenteDatos,
-                color = TG.TextoTenue
-            )
+            Text(text = "Rango seguro: 0 °C a 4 °C", fontSize = 12.sp, fontFamily = FuenteDatos, color = TG.TextoTenue)
         }
     }
-
-    /* ---------------------------------------------------------
--  PANTALLA 2: rol sensor (emisor)
-- --------------------------------------------------------- */
 
     @SuppressLint("MissingPermission")
     @Composable
@@ -479,34 +351,14 @@ class MainActivity : ComponentActivity() {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            PanelTarjeta(
-                modifier = Modifier.fillMaxWidth(),
-                colorBorde = colorLectura.copy(alpha = 0.6f)
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "Simulación de temperatura",
-                        fontSize = 12.sp,
-                        color = TG.TextoSecundario,
-                        letterSpacing = 0.5.sp
-                    )
+            PanelTarjeta(modifier = Modifier.fillMaxWidth(), colorBorde = colorLectura.copy(alpha = 0.6f)) {
+                Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = "Simulación de temperatura", fontSize = 12.sp, color = TG.TextoSecundario, letterSpacing = 0.5.sp)
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "${temperaturaSimulada.value}°C",
-                        fontSize = 56.sp,
-                        fontFamily = FuenteDatos,
-                        fontWeight = FontWeight.Bold,
-                        color = colorLectura
-                    )
+                    Text(text = "${temperaturaSimulada.value}°C", fontSize = 56.sp, fontFamily = FuenteDatos, fontWeight = FontWeight.Bold, color = colorLectura)
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Button(
                             onClick = {
                                 if (temperaturaSimulada.value > -10) {
@@ -517,8 +369,7 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.weight(1f).height(52.dp),
                             shape = RoundedCornerShape(10.dp),
                             border = BorderStroke(1.dp, TG.Azul.copy(alpha = 0.5f)),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F1A2A)),
-                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp, pressedElevation = 0.dp)
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F1A2A))
                         ) {
                             Text("− Bajar", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = TG.Cian)
                         }
@@ -533,8 +384,7 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.weight(1f).height(52.dp),
                             shape = RoundedCornerShape(10.dp),
                             border = BorderStroke(1.dp, TG.Rojo.copy(alpha = 0.5f)),
-                            colors = ButtonDefaults.buttonColors(containerColor = TG.RojoOscuro),
-                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp, pressedElevation = 0.dp)
+                            colors = ButtonDefaults.buttonColors(containerColor = TG.RojoOscuro)
                         ) {
                             Text("+ Subir", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = TG.Rojo)
                         }
@@ -554,13 +404,7 @@ class MainActivity : ComponentActivity() {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            Text(
-                text = "Dispositivos vinculados",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TG.TextoSecundario,
-                modifier = Modifier.fillMaxWidth()
-            )
+            Text(text = "Dispositivos vinculados", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TG.TextoSecundario, modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(6.dp))
 
             LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
@@ -577,49 +421,24 @@ class MainActivity : ComponentActivity() {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = dispositivo.name ?: "UNIDAD DESCONOCIDA",
-                                fontWeight = FontWeight.Bold,
-                                color = TG.TextoPrimario
-                            )
-                            Text(
-                                text = "ID: ${dispositivo.address}",
-                                fontSize = 11.sp,
-                                fontFamily = FuenteDatos,
-                                color = TG.TextoSecundario
-                            )
+                            Text(text = dispositivo.name ?: "UNIDAD DESCONOCIDA", fontWeight = FontWeight.Bold, color = TG.TextoPrimario)
+                            Text(text = "ID: ${dispositivo.address}", fontSize = 11.sp, fontFamily = FuenteDatos, color = TG.TextoSecundario)
                         }
-                        Text(
-                            text = "Conectar",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TG.Cian
-                        )
+                        Text(text = "Conectar", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TG.Cian)
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
-            BotonIndustrial(
-                texto = "Regresar",
-                onClick = onVolverClick,
-                modifier = Modifier.fillMaxWidth(),
-                tipo = TipoBoton.FANTASMA,
-                alto = 48.dp
-            )
+            BotonIndustrial(texto = "Regresar", onClick = onVolverClick, modifier = Modifier.fillMaxWidth(), tipo = TipoBoton.FANTASMA, alto = 48.dp)
         }
     }
-
-    /* ---------------------------------------------------------
--  PANTALLA 3: rol supervisor (receptor)
-- --------------------------------------------------------- */
 
     @Composable
     fun PantallaReceptorSupervisor(onVolverClick: () -> Unit) {
         val enAlarma = estadoAlarma.value
         val sinSenal = temperaturaRecibida.value == "--"
 
-        // Pulso suave del borde solo cuando hay alarma
         val pulso = rememberInfiniteTransition(label = "pulsoAlarma")
         val alfaPulso = pulso.animateFloat(
             initialValue = 0.35f,
@@ -641,9 +460,7 @@ class MainActivity : ComponentActivity() {
                 .padding(20.dp)
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
+                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -681,33 +498,12 @@ class MainActivity : ComponentActivity() {
                     border = BorderStroke(2.dp, colorBordeCard),
                     elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(28.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "Datos recibidos",
-                            fontSize = 12.sp,
-                            color = TG.TextoSecundario,
-                            letterSpacing = 0.5.sp
-                        )
+                    Column(modifier = Modifier.fillMaxWidth().padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(text = "Datos recibidos", fontSize = 12.sp, color = TG.TextoSecundario, letterSpacing = 0.5.sp)
                         Spacer(modifier = Modifier.height(10.dp))
-                        Text(
-                            text = "${temperaturaRecibida.value} °C",
-                            fontSize = 64.sp,
-                            fontFamily = FuenteDatos,
-                            fontWeight = FontWeight.Bold,
-                            color = colorLectura
-                        )
+                        Text(text = "${temperaturaRecibida.value} °C", fontSize = 64.sp, fontFamily = FuenteDatos, fontWeight = FontWeight.Bold, color = colorLectura)
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Rango seguro: 0 °C a 4 °C",
-                            fontSize = 11.sp,
-                            fontFamily = FuenteDatos,
-                            color = TG.TextoTenue
-                        )
+                        Text(text = "Rango seguro: 0 °C a 4 °C", fontSize = 11.sp, fontFamily = FuenteDatos, color = TG.TextoTenue)
                     }
                 }
 
@@ -719,26 +515,10 @@ class MainActivity : ComponentActivity() {
                         colors = CardDefaults.cardColors(containerColor = TG.RojoOscuro),
                         border = BorderStroke(1.dp, TG.Rojo)
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(20.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "⚠️ ANOMALÍA DETECTADA",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFFF6B60),
-                                textAlign = TextAlign.Center
-                            )
+                        Column(modifier = Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(text = "⚠️ ANOMALÍA DETECTADA", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF6B60), textAlign = TextAlign.Center)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Lectura fuera de rango de seguridad.",
-                                fontSize = 13.sp,
-                                color = TG.TextoPrimario,
-                                textAlign = TextAlign.Center
-                            )
+                            Text(text = "Lectura fuera de rango de seguridad.", fontSize = 13.sp, color = TG.TextoPrimario, textAlign = TextAlign.Center)
                         }
                     }
 
@@ -758,20 +538,10 @@ class MainActivity : ComponentActivity() {
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
-                BotonIndustrial(
-                    texto = "Regresar",
-                    onClick = onVolverClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    tipo = TipoBoton.FANTASMA,
-                    alto = 48.dp
-                )
+                BotonIndustrial(texto = "Regresar", onClick = onVolverClick, modifier = Modifier.fillMaxWidth(), tipo = TipoBoton.FANTASMA, alto = 48.dp)
             }
         }
     }
-
-    /* ===========================================================
--  LÓGICA
-- =========================================================== */
 
     private fun cerrarConexiones() {
         try { socketConexion?.close() } catch (_: Exception) {}
@@ -786,11 +556,12 @@ class MainActivity : ComponentActivity() {
         Toast.makeText(this, "Esperando conexión...", Toast.LENGTH_LONG).show()
         Thread {
             try {
-                // CAMBIO 1: Usamos InsecureRfcomm
                 val serverSocket = bluetoothAdapter?.listenUsingInsecureRfcommWithServiceRecord("ThermoGuard", uuidProyecto)
                 val socket = serverSocket?.accept()
+                serverSocket?.close()
 
                 if (socket != null) {
+                    socketConexion = socket
                     runOnUiThread { Toast.makeText(this, "¡Sensor Conectado con Éxito!", Toast.LENGTH_LONG).show() }
                     val inputStream = socket.inputStream
                     val buffer = ByteArray(1024)
@@ -805,16 +576,12 @@ class MainActivity : ComponentActivity() {
 
                             runOnUiThread {
                                 temperaturaRecibida.value = tempLimpiada
-
                                 if (temperaturaNumerica !in 0..4) {
-                                    android.util.Log.d("DEBUG_FIREBASE", "¡Entró a la alerta! Temperatura: $temperaturaNumerica")
                                     estadoAlarma.value = true
-
                                     if (sonidoAlarma?.isPlaying == false) sonidoAlarma?.play()
 
                                     val db = FirebaseFirestore.getInstance()
-                                    val doc = db.collection("alertas").document()
-                                    doc.set(mapOf(
+                                    db.collection("alertas").add(mapOf(
                                         "temperatura" to temperaturaNumerica,
                                         "estado" to "ALERTA_TEMPERATURA",
                                         "hora" to System.currentTimeMillis().toString()
@@ -828,7 +595,6 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             } catch (e: Exception) {
-                // CAMBIO 2: Mensaje de error para el supervisor
                 runOnUiThread { Toast.makeText(this, "Error del Supervisor: ${e.message}", Toast.LENGTH_LONG).show() }
             }
         }.start()
@@ -842,19 +608,31 @@ class MainActivity : ComponentActivity() {
                     val mensaje = "TEMP:$tempActual\n"
                     socket.outputStream.write(mensaje.toByteArray())
                     runOnUiThread { Toast.makeText(this, "Señal enviada", Toast.LENGTH_SHORT).show() }
-                } catch (_: Exception) {
-                    runOnUiThread { Toast.makeText(this, "Error al enviar", Toast.LENGTH_SHORT).show() }
+                } catch (e: Exception) {
+                    runOnUiThread { Toast.makeText(this, "Error al enviar: ${e.message}", Toast.LENGTH_SHORT).show() }
                 }
             }.start()
-        } else Toast.makeText(this, "Aún no estás conectado.", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "Aún no estás conectado.", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun verificarSeguridadYEncender() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val permiso = ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
-            if (permiso == PackageManager.PERMISSION_GRANTED) encenderAntena()
-            else solicitarPermiso.launch(Manifest.permission.BLUETOOTH_CONNECT)
-        } else encenderAntena()
+            val permisoConnect = ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
+            val permisoScan = ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN)
+
+            if (permisoConnect == PackageManager.PERMISSION_GRANTED && permisoScan == PackageManager.PERMISSION_GRANTED) {
+                encenderAntena()
+            } else {
+                solicitarPermiso.launch(arrayOf(
+                    Manifest.permission.BLUETOOTH_CONNECT,
+                    Manifest.permission.BLUETOOTH_SCAN
+                ))
+            }
+        } else {
+            encenderAntena()
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -871,9 +649,15 @@ class MainActivity : ComponentActivity() {
 
         if (permisoOK) {
             val dispositivos = bluetoothAdapter?.bondedDevices
-            if (!dispositivos.isNullOrEmpty()) listaDispositivos.addAll(dispositivos)
+            if (!dispositivos.isNullOrEmpty()) listaDispositilsSafe(dispositivos)
             else Toast.makeText(this, "No hay dispositivos vinculados.", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun listaDispositilsSafe(dispositivos: Set<BluetoothDevice>) {
+        listaDispositivos.clear()
+        listaDispositivos.addAll(dispositivos)
     }
 
     @SuppressLint("MissingPermission")
@@ -882,16 +666,18 @@ class MainActivity : ComponentActivity() {
         Thread {
             try {
                 bluetoothAdapter?.cancelDiscovery()
+                try { socketConexion?.close() } catch (_: Exception) {}
 
-                // CAMBIO 3: Usamos InsecureRfcomm
+                Thread.sleep(500)
+
                 socketConexion = dispositivoDestino.createInsecureRfcommSocketToServiceRecord(uuidProyecto)
                 socketConexion?.connect()
 
                 runOnUiThread { Toast.makeText(this@MainActivity, "¡CONECTADO! Ya puedes enviar señales.", Toast.LENGTH_LONG).show() }
             } catch (e: Exception) {
-                // CAMBIO 4: Leemos la razón exacta
                 runOnUiThread { Toast.makeText(this@MainActivity, "Fallo al conectar: ${e.message}", Toast.LENGTH_LONG).show() }
-                try { socketConexion?.close() } catch (closeException: Exception) { }
+                try { socketConexion?.close() } catch (_: Exception) {}
+                socketConexion = null
             }
         }.start()
     }
